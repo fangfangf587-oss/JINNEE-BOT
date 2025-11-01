@@ -13,7 +13,7 @@ import pytz
 # 🔧 ใส่ TOKEN และ SECRET ของฟ่างตรงนี้
 # ============================================================
 CHANNEL_ACCESS_TOKEN = CHANNEL_ACCESS_TOKEN = "M3vlwbrwKhblV7D8mR/t2yw6pkNkJGHwirpmvVyKv7NvXFFTbUzt8A4xPljbyTayaOjDZWLvYQAipzZ3Kk37ybEP3LoWKlmexIPspLWw/J9PcZnAmjWVovi0lmvymgdh4t417VAAtf5QEw/lPSp77gdB04t89/1O/w1cDnyilFU="
-CHANNEL_SECRET = 6267215bc5bb5436a7f5869421982fc3
+CHANNEL_SECRET = "6267215bc5bb5436a7f5869421982fc3"
 
 line_bot_api = LineBotApi(CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(CHANNEL_SECRET)
