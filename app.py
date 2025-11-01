@@ -1,10 +1,10 @@
 
 import os
-from flask import Flask, request, abort, send_file
+from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import (
-    MessageEvent, TextMessage, ImageMessage, TextSendMessage, ImageSendMessage, UnsendEvent
+    MessageEvent, TextMessage, ImageMessage, TextSendMessage, UnsendEvent
 )
 from datetime import datetime
 import pytz
@@ -114,28 +114,26 @@ def handle_unsend(event):
         display_name = "ไม่ทราบชื่อ"
 
     timestamp = data["timestamp"].strftime("%d/%m/%Y %H:%M:%S")
-    msg_type = "ข้อความ" if data["type"] == "text" else "ภาพ"
 
-    # แสดงข้อความ/ภาพที่ยกเลิก
     if data["type"] == "text":
         text = data["text"]
         reply = (
-            f"[ {text} ]\n"
+            f"[  ข้อความที่ถูกยกเลิก  ]\n"
             f"• ผู้ส่ง: {display_name}\n"
-            f"• เวลาส่ง: {timestamp}\n"
-            f"• ประเภท: {msg_type}"
+            f"• เวลา: {timestamp}\n"
+            f"• ข้อความ : {text}"
         )
-    else:
+    else:  # ถ้าเป็นภาพ
         reply = (
-            f"[ ภาพถูกยกเลิก ]\n"
+            f"[  ข้อความที่ถูกยกเลิก  ]\n"
             f"• ผู้ส่ง: {display_name}\n"
-            f"• เวลาส่ง: {timestamp}\n"
-            f"• ประเภท: {msg_type}"
+            f"• เวลา: {timestamp}\n"
+            f"• ข้อความ : ภาพถูกยกเลิก"
         )
 
     line_bot_api.push_message(group_id, TextSendMessage(text=reply))
 
-    # ลดจำนวนในบิล ถ้าเป็นข้อความหรือภาพ
+    # ลดจำนวนในบิล
     if group_id in chat_counter:
         chat_counter[group_id][data["type"]] = max(0, chat_counter[group_id][data["type"]] - 1)
 
@@ -146,3 +144,4 @@ def handle_unsend(event):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
+   
