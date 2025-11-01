@@ -1,10 +1,10 @@
 
 import os
-from flask import Flask, request, abort
+from flask import Flask, request, abort, send_file
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import (
-    MessageEvent, TextMessage, ImageMessage, TextSendMessage, UnsendEvent
+    MessageEvent, TextMessage, ImageMessage, TextSendMessage, ImageSendMessage, UnsendEvent
 )
 from datetime import datetime
 import pytz
@@ -22,6 +22,13 @@ handler = WebhookHandler(CHANNEL_SECRET)
 message_memory = {}  # เก็บข้อความ/ภาพ
 chat_counter = {}    # group_id -> {"text": n, "image": m}
 bill_number = {}     # group_id -> n
+
+# =================== Serve ภาพ ===================
+@app.route('/images/<filename>')
+def serve_image(filename):
+    if os.path.exists(filename):
+        return send_file(filename, mimetype='image/jpeg')
+    return "File not found", 404
 
 # =================== Webhook ===================
 @app.route("/callback", methods=["POST"])
@@ -46,6 +53,7 @@ def handle_text(event):
     if text.strip() == "เพิ่มประกาศ":
         bill_number[group_id] = bill_number.get(group_id, 0) + 1
         chat_counter[group_id] = {"text": 0, "image": 0}
+        message_memory.clear()  # ล้างข้อความเก่า
         line_bot_api.push_message(group_id, TextSendMessage(
             text=f"เริ่มนับจากประกาศนี้เป็นบิลที่ {bill_number[group_id]} 🧾"
         ))
@@ -89,9 +97,17 @@ def handle_image(event):
     chat_counter.setdefault(group_id, {"text": 0, "image": 0})
     chat_counter[group_id]["image"] += 1
 
+    # บันทึกภาพในเครื่อง
+    image_content = line_bot_api.get_message_content(message_id)
+    image_path = f"temp_{message_id}.jpg"
+    with open(image_path, "wb") as f:
+        for chunk in image_content.iter_content():
+            f.write(chunk)
+
     message_memory[message_id] = {
         "type": "image",
         "user_id": user_id,
+        "image_path": image_path,
         "timestamp": datetime.now(pytz.timezone("Asia/Bangkok")),
         "group_id": group_id
     }
@@ -123,21 +139,28 @@ def handle_unsend(event):
             f"• เวลา: {timestamp}\n"
             f"• ข้อความ : {text}"
         )
-    else:  # ถ้าเป็นภาพ
-        reply = (
+        line_bot_api.push_message(group_id, TextSendMessage(text=reply))
+
+    elif data["type"] == "image":
+        image_path = data["image_path"]
+        reply_text = (
             f"[  ข้อความที่ถูกยกเลิก  ]\n"
             f"• ผู้ส่ง: {display_name}\n"
             f"• เวลา: {timestamp}\n"
             f"• ข้อความ : ภาพถูกยกเลิก"
         )
-
-    line_bot_api.push_message(group_id, TextSendMessage(text=reply))
+        line_bot_api.push_message(group_id, [
+            TextSendMessage(text=reply_text),
+            ImageSendMessage(
+                original_content_url=f"https://{YOUR_DOMAIN}/images/{os.path.basename(image_path)}",
+                preview_image_url=f"https://{YOUR_DOMAIN}/images/{os.path.basename(image_path)}"
+            )
+        ])
 
     # ลดจำนวนในบิล
     if group_id in chat_counter:
         chat_counter[group_id][data["type"]] = max(0, chat_counter[group_id][data["type"]] - 1)
 
-    # ลบจาก memory
     del message_memory[message_id]
 
 # =================== รัน Flask ===================
