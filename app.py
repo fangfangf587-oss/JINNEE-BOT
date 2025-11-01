@@ -15,14 +15,13 @@ app = Flask(__name__)
 CHANNEL_ACCESS_TOKEN = "M3vlwbrwKhblV7D8mR/t2yw6pkNkJGHwirpmvVyKv7NvXFFTbUzt8A4xPljbyTayaOjDZWLvYQAipzZ3Kk37ybEP3LoWKlmexIPspLWw/J9PcZnAmjWVovi0lmvymgdh4t417VAAtf5QEw/lPSp77gdB04t89/1O/w1cDnyilFU="
 CHANNEL_SECRET = "6267215bc5bb5436a7f5869421982fc3"
 YOUR_DOMAIN = "jinnee-bot.onrender.com"
-
 line_bot_api = LineBotApi(CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(CHANNEL_SECRET)
 
 # ======= ตัวเก็บข้อความและบิล =======
-message_memory = {}  # เก็บข้อความ/ภาพ
-chat_counter = {}    # group_id -> {"text": n, "image": m}
-bill_number = {}     # group_id -> n
+message_memory = {}
+chat_counter = {}
+bill_number = {}
 
 # =================== Serve ภาพ ===================
 @app.route('/images/<filename>')
@@ -55,11 +54,10 @@ def handle_text(event):
         text = event.message.text
         message_id = event.message.id
 
-        # ---------- เริ่มนับบิลใหม่ ----------
         if text.strip() == "เพิ่มประกาศ":
             bill_number[group_id] = bill_number.get(group_id, 0) + 1
             chat_counter[group_id] = {"text": 0, "image": 0}
-            message_memory.clear()  # ล้างข้อความเก่า
+            message_memory.clear()
             try:
                 line_bot_api.push_message(group_id, TextSendMessage(
                     text=f"เริ่มนับจากประกาศนี้เป็นบิลที่ {bill_number[group_id]} 🧾"
@@ -68,9 +66,8 @@ def handle_text(event):
                 print("Push message failed (เพิ่มประกาศ):", e)
             return
 
-        # ---------- สรุปบิล ----------
         if text.strip() == "###":
-            counts = chat_counter.get(group_id, {"text": 0, "image": 0})
+            counts = chat_counter.get(group_id, {"text":0,"image":0})
             total = counts["text"] + counts["image"]
             bill_no = bill_number.get(group_id, 1)
             summary = (
@@ -85,18 +82,16 @@ def handle_text(event):
                 print("Push message failed (สรุปบิล):", e)
             return
 
-        # ---------- นับข้อความ ----------
         if text.strip() != ".":
-            chat_counter.setdefault(group_id, {"text": 0, "image": 0})
+            chat_counter.setdefault(group_id, {"text":0,"image":0})
             chat_counter[group_id]["text"] += 1
 
-        # เก็บข้อความ
         message_memory[message_id] = {
-            "type": "text",
-            "user_id": user_id,
-            "text": text,
-            "timestamp": datetime.now(pytz.timezone("Asia/Bangkok")),
-            "group_id": group_id
+            "type":"text",
+            "user_id":user_id,
+            "text":text,
+            "timestamp":datetime.now(pytz.timezone("Asia/Bangkok")),
+            "group_id":group_id
         }
 
     except Exception as e:
@@ -107,26 +102,24 @@ def handle_text(event):
 def handle_image(event):
     try:
         user_id = event.source.user_id
-        group_id = getattr(event.source, 'group_id', user_id)
+        group_id = getattr(event.source,'group_id',user_id)
         message_id = event.message.id
 
-        chat_counter.setdefault(group_id, {"text": 0, "image": 0})
+        chat_counter.setdefault(group_id, {"text":0,"image":0})
         chat_counter[group_id]["image"] += 1
 
-        # บันทึกภาพในเครื่อง
         image_content = line_bot_api.get_message_content(message_id)
         image_path = f"temp_{message_id}.jpg"
-        with open(image_path, "wb") as f:
+        with open(image_path,"wb") as f:
             for chunk in image_content.iter_content():
                 f.write(chunk)
 
-        # เก็บ memory
         message_memory[message_id] = {
-            "type": "image",
-            "user_id": user_id,
-            "image_path": image_path,
-            "timestamp": datetime.now(pytz.timezone("Asia/Bangkok")),
-            "group_id": group_id
+            "type":"image",
+            "user_id":user_id,
+            "image_path":image_path,
+            "timestamp":datetime.now(pytz.timezone("Asia/Bangkok")),
+            "group_id":group_id
         }
 
     except Exception as e:
@@ -143,7 +136,6 @@ def handle_unsend(event):
         group_id = data["group_id"]
         user_id = data["user_id"]
 
-        # ดึงชื่อผู้ส่ง
         try:
             profile = line_bot_api.get_profile(user_id)
             display_name = profile.display_name
@@ -152,7 +144,7 @@ def handle_unsend(event):
 
         timestamp = data["timestamp"].strftime("%d/%m/%Y %H:%M:%S")
 
-        if data["type"] == "text":
+        if data["type"]=="text":
             text = data["text"]
             reply = (
                 f"[  ข้อความที่ถูกยกเลิก  ]\n"
@@ -165,7 +157,7 @@ def handle_unsend(event):
             except Exception as e:
                 print("Push message failed (ข้อความยกเลิก):", e)
 
-        elif data["type"] == "image":
+        elif data["type"]=="image":
             image_path = data["image_path"]
             reply_text = (
                 f"[  ข้อความที่ถูกยกเลิก  ]\n"
@@ -184,21 +176,15 @@ def handle_unsend(event):
             except Exception as e:
                 print("Push message failed (ภาพยกเลิก):", e)
 
-        # ลดจำนวนในบิล
         if group_id in chat_counter:
-            chat_counter[group_id][data["type"]] = max(0, chat_counter[group_id][data["type"]] - 1)
+            chat_counter[group_id][data["type"]] = max(0, chat_counter[group_id][data["type"]]-1)
 
         del message_memory[message_id]
 
     except Exception as e:
         print("Error in handle_unsend:", e)
 
-# =================== รัน Flask สำหรับ Render ===================
+# =================== รัน Flask ===================
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
-       
-  
-
-  
-      
