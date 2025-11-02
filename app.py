@@ -136,11 +136,20 @@ def handle_unsend(event):
         group_id = data["group_id"]
         user_id = data["user_id"]
 
-        try:
-            profile = line_bot_api.get_profile(user_id)
-            display_name = profile.display_name
-        except:
-            display_name = "ไม่ทราบชื่อ"
+       try:
+    # ตรวจว่าอยู่ในกลุ่มหรือไม่
+    if hasattr(event.source, "group_id"):
+        profile = line_bot_api.get_group_member_profile(event.source.group_id, user_id)
+    elif hasattr(event.source, "room_id"):
+        profile = line_bot_api.get_room_member_profile(event.source.room_id, user_id)
+    else:
+        profile = line_bot_api.get_profile(user_id)
+
+    display_name = profile.display_name
+
+except Exception as e:
+    print("ไม่สามารถดึงชื่อผู้ใช้ได้:", e)
+    display_name = "ไม่ทราบชื่อ"
 
         timestamp = data["timestamp"].strftime("%d/%m/%Y %H:%M:%S")
 
