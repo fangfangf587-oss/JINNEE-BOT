@@ -1,4 +1,3 @@
-
 import os
 from flask import Flask, request, abort, send_file
 from linebot import LineBotApi, WebhookHandler
@@ -136,20 +135,18 @@ def handle_unsend(event):
         group_id = data["group_id"]
         user_id = data["user_id"]
 
-       try:
-    # ตรวจว่าอยู่ในกลุ่มหรือไม่
-    if hasattr(event.source, "group_id"):
-        profile = line_bot_api.get_group_member_profile(event.source.group_id, user_id)
-    elif hasattr(event.source, "room_id"):
-        profile = line_bot_api.get_room_member_profile(event.source.room_id, user_id)
-    else:
-        profile = line_bot_api.get_profile(user_id)
-
-    display_name = profile.display_name
-
-except Exception as e:
-    print("ไม่สามารถดึงชื่อผู้ใช้ได้:", e)
-    display_name = "ไม่ทราบชื่อ"
+        try:
+            # ตรวจว่าอยู่ในกลุ่มหรือไม่
+            if hasattr(event.source, "group_id"):
+                profile = line_bot_api.get_group_member_profile(event.source.group_id, user_id)
+            elif hasattr(event.source, "room_id"):
+                profile = line_bot_api.get_room_member_profile(event.source.room_id, user_id)
+            else:
+                profile = line_bot_api.get_profile(user_id)
+            display_name = profile.display_name
+        except Exception as e:
+            print("ไม่สามารถดึงชื่อผู้ใช้ได้:", e)
+            display_name = "ไม่ทราบชื่อ"
 
         timestamp = data["timestamp"].strftime("%d/%m/%Y %H:%M:%S")
 
@@ -197,3 +194,4 @@ except Exception as e:
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
+
